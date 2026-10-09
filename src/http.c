@@ -525,6 +525,11 @@ int http_object_parse(http_object_t* const object, const char* const buffer, con
 	}
 	
 	if (code == KADERR_SUCCESS && object->type == HTTP_REQUEST) {
+		if (path[0] == '/' && (strncmp(path + 1, "http://", 7) == 0 || strncmp(path + 1, "https://", 8) == 0)) {
+			path++;
+			path_size--;
+		}
+
 		object->uri = malloc(path_size + 1);
 		
 		if (object->uri == NULL) {
