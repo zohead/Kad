@@ -467,6 +467,38 @@ static int request_handler(void* pointer) {
 		
 		data->request.uri = uri;
 		uri = NULL;
+	} else if (strncmp(data->request.uri, "http://", 7) != 0 && strncmp(data->request.uri, "https://", 8) != 0) {
+		// auto get hostname from header for non-full uri
+		header = http_headers_get(&data->request.headers, "Host");
+		if (header) {
+			hostname = header->value;
+
+			header = http_headers_get(&data->request.headers, "X-Forwarded-Proto");
+			if (header)
+				item = header->value;
+			else
+				item = HTTP_SCHEME;
+
+			uri = malloc(strlen(item) + strlen(SCHEME_SEPARATOR) + strlen(hostname) + strlen(data->request.uri) + 1);
+			if (uri == NULL) {
+				err = KADERR_MEMORY_ALLOCATE_FAILURE;
+				hostname = NULL;
+				item = NULL;
+				goto end;
+			}
+
+			strcpy(uri, item);
+			strcat(uri, SCHEME_SEPARATOR);
+			strcat(uri, hostname);
+			strcat(uri, data->request.uri);
+
+			free(data->request.uri);
+			data->request.uri = uri;
+
+			hostname = NULL;
+			item = NULL;
+			uri = NULL;
+		}
 	}
 	
 	loggln(LOG_INFO, "[info] client request to %s", data->request.uri);
